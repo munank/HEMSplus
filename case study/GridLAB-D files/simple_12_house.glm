@@ -1,0 +1,756 @@
+#set profiler=1
+#set minimum_timestep=900;
+
+
+clock {
+	timestamp '2017-01-01 00:00:00';
+	stoptime '2017-02-01 00:00:00';
+	timezone PST+8PDT;
+	
+}
+
+
+module powerflow;
+module generators;
+module tape;
+module climate;
+module residential {
+	implicit_enduses NONE;
+};
+
+module powerflow {
+    solver_method NR;
+
+}
+//module tape;//for player to make load dyanmic
+
+#define stylesheet=http://gridlab-d.svn.sourceforge.net/viewvc/gridlab-d/trunk/core/gridlabd-2_0
+
+
+object climate {
+	interpolate LINEAR;
+	name "IL-Chicago";
+	tmyfile "./IL-Chicago_Ohare_Intl_Ap.tmy3";
+};
+
+object triplex_line_conductor {
+	name tp_line_conductor_OH;
+	resistance 0.557;
+	geometric_mean_radius 0.01366988;
+};
+
+// Triplex Line
+object triplex_line_configuration {
+	name triplex_line_configuration_OH;
+	conductor_1 tp_line_conductor_OH;
+	conductor_2 tp_line_conductor_OH;
+	conductor_N tp_line_conductor_OH;
+	insulation_thickness 0.08;
+	diameter 0.4212598;
+}
+
+object triplex_line_conductor {
+	name tp_line_conductor_UG;
+	resistance 0.884;
+	geometric_mean_radius 0.010897;
+};
+
+// Triplex Line
+object triplex_line_configuration {
+	name triplex_line_configuration_UG;
+	conductor_1 tp_line_conductor_UG;
+	conductor_2 tp_line_conductor_UG;
+	conductor_N tp_line_conductor_UG;
+	insulation_thickness 0.08;
+	diameter 0.3358268;
+}
+
+ object transformer_configuration {
+	name transformer_configuration_1418;
+	connect_type SINGLE_PHASE_CENTER_TAPPED;
+	install_type PADMOUNT;
+	primary_voltage 14400 V;
+	secondary_voltage 122.4 V;
+	//power_rating 150.0;
+	powerA_rating 75.0;
+	resistance 0.01716;
+	reactance 0.03575;
+}
+
+//measured_voltage_A
+
+object meter {
+	name node1;
+	phases "ABCN";
+	bustype SWING;
+	voltage_A +14400+0.000j;
+	voltage_B -7200-12470.765j;
+	voltage_C -7200+12470.765j;
+	nominal_voltage 14400;
+}
+
+object transformer {
+	name distribution_transformer;
+	phases AS;
+	from node1;
+	to main_node;
+	configuration transformer_configuration_1418;
+}
+
+object triplex_node{
+	name main_node;
+	phases AS;
+	nominal_voltage 120;
+	   object recorder{
+			file main_node_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+}
+
+
+object triplex_line {
+	name triplex_line_UG_main_node;
+	phases AS;
+	from main_node;
+	to node2;
+	length 0.1;
+	configuration triplex_line_configuration_OH;
+}
+
+object triplex_meter {
+	name node2;
+	phases AS;	
+	nominal_voltage 120;	
+	object recorder {	                	       
+       	     	              	file measured_voltage_distribution_transformer.csv;
+       	     	                     interval 900;
+       	     	                     property measured_voltage_1.real, measured_voltage_2.real,measured_real_power,measured_reactive_power,indiv_measured_power_1,indiv_measured_power_2;
+	     	     	     };
+	
+}
+
+///////////////////////////////////////////////////
+object triplex_line {
+	name triplex_line_UG_1;
+	phases AS;
+	from node2;
+	to node3;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+
+object triplex_node{
+       name node3;
+       phases AS;
+	   nominal_voltage 120;
+	   object recorder{
+			file node1_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+	   
+}
+
+object triplex_meter{
+	name house_meter_1;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_1_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_1;
+	phases AS;
+	from node3;
+	to house_meter_1;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+
+
+/////////////////////////////////////////////////////////////////////////	
+
+object triplex_line {
+	name triplex_line_UG_2;
+	phases AS;
+	from node2;
+	to node4;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+
+
+
+
+object triplex_node {
+       name node4;
+       phases AS;
+	   nominal_voltage 120;
+	   object recorder{
+			file node2_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+}
+
+object triplex_meter{
+	name house_meter_2;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_2_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_2;
+	phases AS;
+	from node4;
+	to house_meter_2;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+
+////modularity start here
+
+object triplex_line {
+	name triplex_line_OH_1;
+	phases AS;
+	from node2;
+	to node5;
+	length 65.6168;
+	configuration triplex_line_configuration_OH;
+}
+
+object triplex_node {
+	name node5;
+	phases AS;
+	nominal_voltage 120;
+}
+
+///////////////////////////////////////////////////
+object triplex_line {
+	name triplex_line_UG_3;
+	phases AS;
+	from node5;
+	to node6;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+object triplex_node{
+       name node6;
+       phases AS;
+	   nominal_voltage 120;
+	   object recorder{
+			file node3_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+}
+
+object triplex_meter{
+	name house_meter_3;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_3_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_3;
+	phases AS;
+	from node6;
+	to house_meter_3;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+
+
+/////////////////////////////////////////////////////////////////////////	
+
+object triplex_line {
+	name triplex_line_UG_4;
+	phases AS;
+	from node5;
+	to node7;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+
+object triplex_node {
+       name node7;
+       phases AS;
+	   nominal_voltage 120;
+	   object recorder{
+			file node4_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+}
+
+object triplex_meter{
+	name house_meter_4;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_4_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_4;
+	phases AS;
+	from node7;
+	to house_meter_4;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+///modularity ends
+
+////modularity start here
+
+object triplex_line {
+	name triplex_line_OH_2;
+	phases AS;
+	from node5;
+	to node8;
+	length 65.6168;
+	configuration triplex_line_configuration_OH;
+}
+
+object triplex_node {
+	name node8;
+	phases AS;
+	nominal_voltage 120;
+}
+
+///////////////////////////////////////////////////
+object triplex_line {
+	name triplex_line_UG_5;
+	phases AS;
+	from node8;
+	to node9;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+object triplex_node{
+       name node9;
+       phases AS;
+	   nominal_voltage 120;
+	   object recorder{
+			file node5_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+}
+
+object triplex_meter{
+	name house_meter_5;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_5_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_5;
+	phases AS;
+	from node9;
+	to house_meter_5;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+
+/////////////////////////////////////////////////////////////////////////	
+
+object triplex_line {
+	name triplex_line_UG_6;
+	phases AS;
+	from node8;
+	to node10;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+
+
+
+
+object triplex_node {
+       name node10;
+       phases AS;
+	   nominal_voltage 120;
+	   object recorder{
+			file node6_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+}
+
+object triplex_meter{
+	name house_meter_6;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_6_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_6;
+	phases AS;
+	from node10;
+	to house_meter_6;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+
+///modularity ends
+////modularity start here
+
+object triplex_line {
+	name triplex_line_OH_3;
+	phases AS;
+	from node8;
+	to node11;
+	length 65.6168;
+	configuration triplex_line_configuration_OH;
+}
+
+object triplex_node {
+	name node11;
+	phases AS;
+	nominal_voltage 120;
+}
+
+///////////////////////////////////////////////////
+object triplex_line {
+	name triplex_line_UG_7;
+	phases AS;
+	from node11;
+	to node12;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+object triplex_node{
+       name node12;
+       phases AS; 
+	   nominal_voltage 120;
+	   object recorder{
+			file node7_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+
+}
+
+object triplex_meter{
+	name house_meter_7;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_7_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_7;
+	phases AS;
+	from node12;
+	to house_meter_7;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+
+/////////////////////////////////////////////////////////////////////////	
+
+object triplex_line {
+	name triplex_line_UG_8;
+	phases AS;
+	from node11;
+	to node13;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+
+object triplex_node {
+       name node13;
+       phases AS;
+	   nominal_voltage 120;
+	   object recorder{
+			file node8_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+}
+
+object triplex_meter{
+	name house_meter_8;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_8_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_8;
+	phases AS;
+	from node13;
+	to house_meter_8;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+
+///modularity ends
+////modularity start here
+
+object triplex_line {
+	name triplex_line_OH_4;
+	phases AS;
+	from node11;
+	to node14;
+	length 65.6168;
+	configuration triplex_line_configuration_OH;
+}
+
+object triplex_node {
+	name node14;
+	phases AS;
+	nominal_voltage 120;
+}
+
+///////////////////////////////////////////////////
+object triplex_line {
+	name triplex_line_UG_9;
+	phases AS;
+	from node14;
+	to node15;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+
+object triplex_node{
+       name node15;
+       phases AS;
+	   nominal_voltage 120;
+	   object recorder{
+			file node9_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+}
+
+object triplex_meter{
+	name house_meter_9;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_9_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_9;
+	phases AS;
+	from node15;
+	to house_meter_9;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+/////////////////////////////////////////////////////////////////////////	
+
+object triplex_line {
+	name triplex_line_UG_10;
+	phases AS;
+	from node14;
+	to node16;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+
+
+
+
+object triplex_node {
+       name node16;
+       phases AS;
+	   nominal_voltage 120;
+	   object recorder{
+			file node10_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+}
+
+object triplex_meter{
+	name house_meter_10;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_10_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_10;
+	phases AS;
+	from node16;
+	to house_meter_10;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+///modularity ends
+////modularity start here
+
+object triplex_line {
+	name triplex_line_OH_5;
+	phases AS;
+	from node14;
+	to node17;
+	length 65.6168;
+	configuration triplex_line_configuration_OH;
+}
+
+object triplex_node {
+	name node17;
+	phases AS;
+	nominal_voltage 120;
+	//voltage_N 0;
+}
+
+///////////////////////////////////////////////////
+object triplex_line {
+	name triplex_line_UG_11;
+	phases AS;
+	from node17;
+	to node18;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+object triplex_node{
+       name node18;
+       phases AS;
+	   nominal_voltage 120;
+	   object recorder{
+			file node11_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+}
+
+object triplex_meter{
+	name house_meter_11;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_11_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_11;
+	phases AS;
+	from node18;
+	to house_meter_11;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+/////////////////////////////////////////////////////////////////////////	
+
+object triplex_line {
+	name triplex_line_UG_12;
+	phases AS;
+	from node17;
+	to node19;
+	length 65.6168;
+	configuration triplex_line_configuration_UG;
+}
+
+
+object triplex_node {
+       name node19;
+       phases AS;
+	   nominal_voltage 120;
+	   object recorder{
+			file node12_voltage.csv;
+			interval 900;
+			property voltage_1,voltage_2,voltage_12,power_1,power_2,power_12;
+			};
+}
+
+object triplex_meter{
+	name house_meter_12;
+	phases AS;
+	nominal_voltage 120;
+    object recorder {
+		file house_12_voltage.csv;
+		interval 900;
+		property measured_real_power,measured_voltage_1,measured_voltage_2,indiv_measured_power_1,indiv_measured_power_2;
+		};
+	   
+}
+
+object triplex_line {
+	name triplex_line_meter_12;
+	phases AS;
+	from node19;
+	to house_meter_12;
+	length 0.1;
+	configuration triplex_line_configuration_UG;
+}
+
+
+
+///modularity ends
+
+
+
